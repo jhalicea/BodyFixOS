@@ -29,6 +29,8 @@ Service businesses often depend on knowledge that lives only in the practitioner
 | Automation | Reminders, routing, reporting, and human-approved actions |
 | Governance | Privacy, permissions, auditability, and claims discipline |
 
+The current public repository is still a design/roadmap repository, not an implemented production system. The architecture baseline is being developed as greenfield work and must distinguish proposed target structure from verified implementation.
+
 ## Current public work
 
 - Domain model and operating boundaries
@@ -36,6 +38,7 @@ Service businesses often depend on knowledge that lives only in the practitioner
 - Privacy and authorization requirements
 - Automation opportunity analysis
 - Metrics and acceptance-test design
+- Software architecture and engineering baseline
 
 ## Planned implementation slices
 
@@ -47,7 +50,13 @@ Service businesses often depend on knowledge that lives only in the practitioner
 
 ## Relationship to HumanOS
 
-BodyFixOS is a domain project informed by [HumanOS](https://github.com/jhalicea/humanos): human authority, explicit permissions, durable records, evidence, and honest capability labels remain core constraints.
+BodyFixOS and HumanOS are **separate software products** with separate repositories, local project folders, architecture, storage, credentials, tests, releases, backups, and security/privacy boundaries.
+
+BodyFixOS may reuse general engineering principles learned from HumanOS—human authority, explicit permissions, durable evidence, honest capability labels, provider independence—but it does not inherit HumanOS internals or private state.
+
+If a future integration is approved, it must use an explicit, narrow, versioned connector/API with separate identity, permissions, data ownership, auditability, and revocation. The products do not share a database or import each other's internal source code by default.
+
+See `docs/decisions/ADR-0001-independent-product-boundary.md`.
 
 ## Safety boundary
 
