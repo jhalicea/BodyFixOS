@@ -4,6 +4,11 @@
 The tool never moves, renames, deletes, edits, uploads, commits, or opens document
 contents. It records metadata and SHA-256 hashes so duplicates can be reconciled
 before any cleanup.
+
+BodyFix already has an established numbered private master-system taxonomy. This
+script preserves that lineage: a leading document prefix such as ``03_`` or ``08_``
+is recorded as the candidate master-system folder rather than inventing a second
+folder structure.
 """
 
 from __future__ import annotations
@@ -13,6 +18,7 @@ import csv
 import hashlib
 import json
 import pathlib
+import re
 from datetime import datetime, timezone
 
 
@@ -33,6 +39,8 @@ BODYFIX_HINTS = {
     "sop", "manual", "protocol", "pricing", "brand", "follow-up", "followup",
 }
 
+MASTER_PREFIX = re.compile(r"^(00|01|02|03|04|05|06|07|08|09|10|11|12|99)(?:_|\b)")
+
 
 def sha256(path: pathlib.Path) -> str:
     digest = hashlib.sha256()
@@ -42,35 +50,33 @@ def sha256(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
-def classify_filename(path: pathlib.Path) -> tuple[str, str, str | None]:
+def infer_master_system_location(path: pathlib.Path) -> tuple[str, str]:
+    """Return (candidate location, confidence) without opening document content."""
+    match = MASTER_PREFIX.match(path.stem)
+    if match:
+        return f"existing-master-folder-{match.group(1)}", "HIGH"
+
+    for part in reversed(path.parts[:-1]):
+        match = MASTER_PREFIX.match(part)
+        if match:
+            return f"existing-master-folder-{match.group(1)}", "MEDIUM"
+
+    return "", "LOW"
+
+
+def classify_filename(path: pathlib.Path) -> tuple[str, str]:
     name = path.stem.lower()
 
+    if any(token in name for token in ("pending", "addendum", "inventory note")):
+        return "IMPORT_UNRECONCILED", "MEDIUM"
     if any(token in name for token in ("archive", "legacy", "old", "obsolete")):
-        return "LEGACY_SUPERSEDED", "LOW", "99_archive/"
-    if any(token in name for token in ("import", "export", "migration")):
-        return "IMPORT_UNRECONCILED", "MEDIUM", "90_imports/"
-    if any(token in name for token in ("architecture", "adr", "engineering")):
-        return "UNKNOWN", "MEDIUM", "07_architecture/"
-    if any(token in name for token in ("privacy", "security", "consent", "incident")):
-        return "UNKNOWN", "MEDIUM", "06_security_privacy/"
-    if any(token in name for token in ("schedule", "deposit", "payment", "cancel")):
-        return "UNKNOWN", "MEDIUM", "04_scheduling_payments/"
-    if any(token in name for token in ("intake", "follow", "retention", "journey")):
-        return "UNKNOWN", "MEDIUM", "03_client_journey/"
-    if any(token in name for token in ("manual", "training", "protocol", "method")):
-        return "UNKNOWN", "MEDIUM", "08_training_manuals/"
-    if any(token in name for token in ("brand", "marketing", "campaign", "social")):
-        return "UNKNOWN", "MEDIUM", "09_brand_marketing/"
-    if any(token in name for token in ("metric", "report", "dashboard", "kpi")):
-        return "UNKNOWN", "MEDIUM", "10_metrics_reporting/"
-    if any(token in name for token in ("workflow", "automation", "zapier", "n8n", "integration")):
-        return "UNKNOWN", "MEDIUM", "05_automation_integrations/"
-    if any(token in name for token in ("room", "supply", "operation", "opening", "closing")):
-        return "UNKNOWN", "MEDIUM", "02_clinic_operations/"
-    if any(token in name for token in ("product", "roadmap", "offer", "pricing")):
-        return "UNKNOWN", "MEDIUM", "01_product/"
+        return "LEGACY_SUPERSEDED", "LOW"
+    if any(token in name for token in ("export", "rendered", "print")):
+        return "GENERATED_EXPORT", "LOW"
+    if any(token in name for token in ("import", "migration")):
+        return "IMPORT_UNRECONCILED", "MEDIUM"
 
-    return "UNKNOWN", "LOW", None
+    return "UNKNOWN", "LOW"
 
 
 def looks_relevant(path: pathlib.Path) -> bool:
@@ -121,7 +127,11 @@ def main() -> int:
         for path in iter_documents(root, args.include_all_documents):
             stat = path.stat()
             digest = sha256(path)
-            doc_class, confidence, proposed = classify_filename(path)
+            doc_class, class_confidence = classify_filename(path)
+            master_location, location_confidence = infer_master_system_location(path)
+            confidence = "HIGH" if "HIGH" in (class_confidence, location_confidence) else (
+                "MEDIUM" if "MEDIUM" in (class_confidence, location_confidence) else "LOW"
+            )
             hashes.setdefault(digest, []).append(str(path))
             records.append({
                 "document_id": "",
@@ -132,15 +142,16 @@ def main() -> int:
                 "sensitivity": "UNKNOWN",
                 "version_or_date": "",
                 "authority_status": "UNKNOWN",
+                "master_system_location": master_location,
                 "hash": digest,
                 "duplicate_of": "",
                 "conflicts_with": "",
-                "proposed_destination": proposed or "",
+                "proposed_destination": master_location,
                 "confidence": confidence,
                 "action": "REVIEW",
                 "size_bytes": stat.st_size,
                 "modified_utc": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
-                "notes": "Metadata-only inventory; document contents were not opened.",
+                "notes": "Metadata-only inventory; document contents were not opened. Existing master-system location is inferred only from path/filename prefixes.",
             })
 
     canonical_for_hash = {digest: paths[0] for digest, paths in hashes.items() if len(paths) > 1}
@@ -160,9 +171,9 @@ def main() -> int:
 
     fields = [
         "document_id", "title", "current_path", "file_type", "document_class",
-        "sensitivity", "version_or_date", "authority_status", "hash", "duplicate_of",
-        "conflicts_with", "proposed_destination", "confidence", "action", "size_bytes",
-        "modified_utc", "notes",
+        "sensitivity", "version_or_date", "authority_status", "master_system_location",
+        "hash", "duplicate_of", "conflicts_with", "proposed_destination", "confidence",
+        "action", "size_bytes", "modified_utc", "notes",
     ]
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")
