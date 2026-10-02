@@ -1,52 +1,40 @@
 # BodyFixOS Architecture Baseline Plan
 
 Status: **GREENFIELD ARCHITECTURE CANDIDATE — NO IMPLEMENTATION CLAIM**  
-Baseline: `main` @ `64c8226e4b5e59698586e7612acac1166da10384`  
+Baseline: `main` @ `25a822803ceb93f6dba9c5e6cb2bacd3b8702d39`  
 Date: 2026-10-01
 
 ## 1. Evidence-backed current state
 
-At this baseline, the public BodyFixOS repository contains a design/roadmap README and no application source tree, test suite, CI workflow, database schema, runtime, deployment configuration or production integration code.
+At this baseline, the public BodyFixOS repository contains product/architecture documentation but no production application source tree, database schema, deployed runtime, or production integration code.
 
-Therefore BodyFixOS must **not** be described as a brownfield implemented software system yet. Its current architecture is conceptual. The next architecture work is greenfield design grounded in verified business workflows and privacy requirements.
+Therefore BodyFixOS is a **greenfield software product**. Architecture decisions may exist before code, but documents must not be described as implemented or enforced unless code/tests prove that state.
+
+Evidence labels used here:
+
+- **DOCUMENTED** — repository text states it.
+- **TESTED** — repeatable test evidence demonstrates it.
+- **ENFORCED** — code or Continuous Integration automation blocks violations.
+- **PROPOSED** — candidate design awaiting ratification/implementation.
+- **UNKNOWN** — evidence is insufficient.
 
 ## 2. Product boundary — hard invariant
 
 BodyFixOS is an independent software product for BodyFix Clinic operations.
 
-It owns its own:
+It owns its own repository, local project folder, architecture, domain model, private operational data stores, credentials/secrets, tests, releases, backups, runbooks, security/privacy boundary, roadmap, and Architecture Decision Records (ADRs).
 
-- repository and local project folder;
-- architecture and domain model;
-- private operational data stores;
-- credentials and secrets;
-- tests and evaluation fixtures;
-- CI/CD and releases;
-- runbooks, backups and recovery procedures;
-- security/privacy boundary;
-- roadmap and architectural decisions.
+BodyFixOS is **not** a HumanOS module, subdirectory, database namespace, internal package, or private-state subtree.
 
-BodyFixOS is **not** a HumanOS module, subdirectory, database namespace or internal package.
+A future HumanOS integration, if deliberately approved, must be an external versioned connector / Application Programming Interface (API) contract with a separate identity, narrow scope, minimal data transfer, revocable permission, audit evidence, and independent failure/recovery behavior.
 
-A future HumanOS integration, if deliberately approved, must be an external connector/API boundary:
+There is no `HumanOSPort` placeholder inside BodyFixOS. A HumanOS connector is designed only if an approved real integration need appears.
 
-```text
-HumanOS                         BodyFixOS
-   |                               |
-   |  explicit versioned contract  |
-   +------ connector / API --------+
-          narrow scope
-          minimal data
-          separate identity
-          revocable permission
-          audit trail
-```
+No shared database, direct internal imports, shared private-state directory, or automatic HumanOS access to BodyFixOS records is allowed by default.
 
-No shared database, implicit source imports, shared private-state directory, or automatic HumanOS access to BodyFixOS records is allowed by default.
+## 3. Product purpose
 
-## 3. Product purpose from current repository evidence
-
-The existing roadmap establishes these product goals:
+BodyFixOS should:
 
 - preserve a high-touch human-centered client experience;
 - standardize discovery/intake, expectations, scheduling, follow-up and service recovery;
@@ -55,42 +43,35 @@ The existing roadmap establishes these product goals:
 - use least-privilege access and deliberate data collection;
 - support repeatable operations for future locations and teams.
 
-Those goals drive the architecture; technology choices do not come first.
+Business workflow evidence drives architecture. Technology choices serve that purpose, not the reverse.
 
-## 4. Architecturally significant quality attributes
+## 4. Quality attributes to make testable
 
-Before selecting frameworks/vendors, BodyFixOS should define testable scenarios for:
+### Scheduling integrity
+The system must prevent or visibly detect conflicting appointments/resource assignments and expose reconciliation paths rather than silently overwriting state.
+
+### Payment/deposit integrity
+The system must never silently lose, duplicate, or misrepresent a payment/deposit event. External payment-provider facts must reconcile against BodyFixOS records.
 
 ### Privacy and data minimization
 Collect and retain only information required for legitimate operations. Public code/tests use synthetic data. Private client information never belongs in the public repository.
 
 ### Human authority
-Automation may recommend, prepare, classify or route work, but consequential client/business actions follow explicit authority rules.
+Automation may recommend, prepare, classify or route work, but consequential client/business actions follow explicit authority rules enforced outside the model.
 
-### Reliability
-Scheduling, deposits, reminders and follow-up workflows must have visible failure states, retry/recovery behavior and duplicate-prevention where applicable.
+### Reliability and recoverability
+Reminders, follow-up, scheduling and payment workflows need visible failures, idempotency/duplicate prevention where applicable, retry/recovery behavior, backups and tested restoration/reconciliation.
 
 ### Auditability
-Important business/automation actions should be attributable to a human or system identity with timestamps and outcomes.
+Important business/automation actions are attributable to a human or system identity with timestamp, requested action, authority, outcome and evidence.
 
-### Portability
-Core business rules should not be inseparable from one scheduling, payment, messaging, AI or cloud provider.
-
-### Modifiability
-External vendor integrations should be replaceable through explicit adapter boundaries rather than leaking provider-specific calls across business logic.
-
-### Security
-Credentials, client data and privileged operations follow least privilege, environment separation and auditable access.
+### Modifiability and portability
+Core business rules remain independent from one payment, scheduling, messaging, Artificial Intelligence (AI), automation, database-hosting, or cloud provider where the cost of independence is justified.
 
 ### Operational simplicity
-As an early product, complexity must be justified. The default is the simplest architecture that can safely support current workflows and evidence gathering.
+BodyFixOS starts with the simplest architecture that safely supports current workflows. New abstractions must solve a demonstrated problem.
 
-### Recoverability
-Backups, exports and tested restore/reconciliation procedures must exist before the system becomes operationally critical.
-
-## 5. Proposed domain map — to validate with workflow evidence
-
-The following is a **target hypothesis**, not an implemented map:
+## 5. Domain map — target hypothesis to validate
 
 ```text
 BodyFixOS
@@ -120,183 +101,206 @@ BodyFixOS
     user identities, roles, approvals, audit events, privacy controls
 ```
 
-The domain map must be validated against real workflows before code boundaries are frozen.
+The domain map remains a target hypothesis until real workflows/documents validate it.
 
-## 6. Proposed architecture style
+## 6. Architecture style and prior stack decision
 
-### Sensible default: modular monolith first
+The intended architecture style is a **modular monolith**: one deployable application with explicit internal module boundaries. Distributed services are not the default.
 
-For an early product with one primary business domain and a small engineering/operations team, the starting target should be a modular monolith unless evidence proves independent services are needed.
+A prior owner-directed project decision selected a TypeScript-only initial application stack built around **Next.js**, **PostgreSQL**, and managed **Supabase** infrastructure to start, with Python deferred unless a demonstrated need justifies adding it. That decision is being reconstructed into a repository Architecture Decision Record for explicit ratification rather than being silently treated as either forgotten or newly invented.
 
-That means one deployable application may contain clear internal modules, but modules own their rules/data access and communicate through explicit interfaces.
+Supabase is an implementation provider, not the owner of BodyFixOS business meaning. The design must preserve a practical exit path for canonical domain data and business rules.
 
-This avoids premature distributed-system cost while preserving boundaries that could later support extraction if scale, isolation, compliance, ownership or availability needs justify it.
+## 7. Build-versus-buy before abstraction
 
-This is a default, not a permanent rule or a claim that BodyFixOS is currently implemented this way.
+Before implementing a subsystem, ask:
 
-## 7. External systems as ports/adapters
+1. Is this capability core BodyFixOS differentiation or commodity infrastructure?
+2. Does an existing product/provider already perform it safely enough?
+3. What business data must BodyFixOS own versus reference/reconcile externally?
+4. What would make a provider realistically replaceable?
+5. What operational burden is created by building it ourselves?
+6. What evidence would justify a custom implementation later?
 
-Potential categories of external dependency should sit behind adapters:
+Scheduling, payment processing, messaging delivery, identity, storage, analytics, and automation should not be rebuilt merely because BodyFixOS could build them.
 
-```text
-BodyFixOS application/domain
-        |
-        +-- SchedulingPort  -> scheduling vendor adapter
-        +-- PaymentPort     -> payment processor adapter
-        +-- MessagingPort   -> SMS/email provider adapter
-        +-- CRMPort         -> CRM/client-management adapter if used
-        +-- AutomationPort  -> workflow/automation platform adapter if used
-        +-- AIServicePort   -> optional bounded AI provider adapter
-        +-- HumanOSPort     -> future optional HumanOS connector only
-```
+## 8. Ports/adapters only when justified
 
-The domain layer should not know provider SDK details.
+Do not create one abstraction per vendor in advance.
 
-## 8. Data architecture principles
+A port/adapter boundary earns its place when at least one of these is true:
 
-Before defining tables/schemas, classify data by purpose and sensitivity.
+- the provider is plausibly replaceable and the seam materially reduces lock-in;
+- a fake/test implementation is needed for reliable automated testing;
+- provider-specific types would otherwise leak into core business rules;
+- multiple providers/implementations are already required;
+- security/reliability policy requires a narrow choke point.
 
-At minimum distinguish:
+The first implementation should introduce only the seams required by the first vertical slice. It must not pre-create `SchedulingPort`, `PaymentPort`, `MessagingPort`, `CRMPort`, `AutomationPort`, `AIServicePort`, and `HumanOSPort` merely as architecture decoration.
+
+Provider Software Development Kit (SDK) types should stop at a justified adapter boundary rather than spreading across the domain.
+
+## 9. Data architecture principles
+
+Before tables/schemas are expanded, classify data by purpose and sensitivity. At minimum distinguish:
 
 - public/business-reference data;
 - operational configuration;
 - client contact/appointment data;
-- payment-status references/tokens (avoid storing raw payment credentials where a processor can own them);
+- payment-status references/tokens, while avoiding raw payment credentials where a processor should own them;
 - private service/assessment records if later required;
 - audit/event records;
 - analytics/derived metrics;
 - synthetic test fixtures.
 
-Each category requires explicit owner, retention, export/deletion expectations, access policy and backup/recovery behavior.
+Each category needs an owner, source of truth, retention expectation, export/deletion expectation, access policy, backup/recovery behavior, and reconciliation rule.
 
-BodyFixOS should not copy all vendor data locally merely because an API makes it available.
+BodyFixOS should not mirror all vendor data merely because an API exposes it.
 
-## 9. Automation architecture
+## 10. Agent and automation security boundary
 
-Automation should progress from deterministic workflows to AI assistance only where the outcome can be verified.
+BodyFixOS may eventually combine:
 
-Suggested authority tiers:
+- untrusted inbound client messages;
+- private client/business data;
+- Artificial Intelligence models/agents;
+- outbound email/SMS;
+- scheduling/payment/other actions.
 
-### GREEN — read/prepare/reversible
-Examples: calculate a report, prepare a draft reminder, detect missing fields, generate an internal checklist.
+That combination is high risk. Model output is never the permission system.
 
-### AMBER — operational write with recovery
-Examples: update a non-destructive internal status, create a draft follow-up, prepare a schedule change for approval.
+Required controls before such automation becomes operational:
 
-### RED — consequential external action
-Examples: charge/refund money, send sensitive client communications, cancel appointments, delete records, change permissions, deploy production changes.
+- unique agent/system identity;
+- narrowly scoped credentials/capabilities;
+- explicit input trust classification;
+- separation between reading content and authorization to act;
+- human approval tier for sensitive or consequential outbound communication;
+- action/spend/rate caps;
+- idempotency and duplicate-action protection;
+- durable audit trail;
+- revocation/kill switch outside the model;
+- deterministic policy enforcement outside prompts;
+- incident/recovery procedure;
+- evaluation/red-team cases for prompt injection, malicious inbound content, misrouting, privacy leakage and unsafe tool proposals.
 
-RED actions require explicit approval/policy enforcement outside the model or workflow engine.
+The existing GREEN / AMBER / RED model, when used, is strictly an **authority/delegation axis**. It must not be reused to describe architecture reversibility.
 
-## 10. Security and privacy architecture
+## 11. Compliance/privacy review checkpoint
 
-Before production implementation, create:
+Before enabling workflows involving sensitive health/body information, payments, protected communications, or other legally regulated data, BodyFixOS must identify what laws/contracts/vendor agreements actually apply to the concrete workflow and jurisdiction.
 
-- data-flow diagram and trust boundaries;
-- threat model;
-- identity/authentication design;
-- authorization model;
-- secrets policy;
-- vendor/subprocessor inventory;
-- audit requirements;
-- retention/export/deletion policy;
-- backup/recovery procedure;
-- incident-response runbook;
-- synthetic-data test policy.
+The architecture does **not** declare that a specific law automatically applies. Questions such as Health Insurance Portability and Accountability Act (HIPAA) coverage, state health-privacy duties, payment-card obligations, record retention, consent and vendor agreements require verified facts and qualified legal/compliance review where appropriate.
 
-If future workflows involve regulated health information or other legally protected data, applicable obligations and vendor agreements must be evaluated before those workflows are enabled. Architecture documents should state verified requirements rather than assuming a regulatory classification.
+Compliance conclusions must be recorded as evidence-backed requirements, not guessed from product labels.
 
-## 11. Engineering baseline to establish before implementation
+## 12. Engineering baseline
 
-The first implementation ADRs should deliberately choose and record:
+The first implementation baseline should deliberately record:
 
-- primary language/runtime;
-- application/web framework;
-- database/storage;
+- TypeScript runtime/tooling choice;
+- Next.js application framework choice;
+- PostgreSQL data model/migration strategy;
+- managed Supabase implementation role and exit path;
 - local development environment;
-- IDE/editor-neutral tooling requirements;
+- Integrated Development Environment (IDE) / editor-neutral tooling requirements;
 - package/dependency manager;
 - formatter/linter/type checking;
 - unit/integration/end-to-end testing strategy;
-- migrations;
-- CI/CD;
-- hosting/deployment environment;
+- Continuous Integration (CI) checks;
+- Continuous Delivery/Deployment (CD) strategy when deployment begins;
 - configuration/secrets management;
-- logging/metrics/tracing/alerting;
-- backup/restore;
+- logging/metrics/tracing/alerting as needed;
+- backup/restore/reconciliation;
 - versioning/release/rollback;
 - dependency/security scanning.
 
-No technology should be inserted merely because HumanOS uses it. Reuse patterns when they fit; preserve product independence.
+Python remains deferred unless evidence justifies a separate Python service/tool. No technology is adopted merely because HumanOS uses it.
 
-## 12. Proposed repository structure — target, not implemented
+## 13. Repository and document architecture
+
+The code repository contains public/repository-safe source and durable architecture/product documentation. Private clinic manuals and operational source-of-truth documents may require a separate private local document root and must not be pushed into a public repository simply for neatness.
+
+Repository-safe documentation categories may include:
 
 ```text
-BodyFixOS/
-|
-+-- README.md
-+-- docs/
-|   +-- architecture/
-|   +-- decisions/
-|   +-- security/
-|   +-- runbooks/
-|   +-- product/
-|
-+-- src/ or app/
-|   +-- client_journey/
-|   +-- scheduling/
-|   +-- payments/
-|   +-- service_operations/
-|   +-- communications/
-|   +-- knowledge/
-|   +-- reporting/
-|   +-- identity_audit/
-|   +-- integrations/
-|
-+-- tests/
-+-- scripts/
-+-- infrastructure/   # only if/when infrastructure-as-code exists
-+-- .github/workflows/
+docs/
+  00_governance/
+  01_product/
+  02_clinic_operations/
+  03_client_journey/
+  04_scheduling_payments/
+  05_automation_integrations/
+  06_security_privacy/
+  07_architecture/
+  08_training_manuals/
+  09_brand_marketing/
+  10_metrics_reporting/
+  90_imports/
+  99_archive/
 ```
 
-The final structure follows the chosen language/framework and validated module boundaries; these names are illustrative.
+This is a classification model, not permission to move every private document into Git. The actual computer cleanup must build a document register first: current path, title, type, version/date, authority/source-of-truth status, duplicate/conflict status, sensitivity, proposed destination, and confidence.
 
-## 13. Architecture documentation set
+## 14. Architecture documentation set — proportional
 
-The first architecture milestone should produce:
+Do not create artifacts merely to increase document count. Produce an artifact when it answers a current engineering question.
 
-1. System Context (C4 L1)
-2. Container/application view (C4 L2)
-3. Domain/bounded-context map
-4. Client/business workflow map
-5. Data classification + ownership/lifecycle map
-6. Trust-boundary/threat model
-7. Integration/vendor adapter map
-8. Deployment/build/release map
-9. Quality-attribute scenarios
-10. ADR register
-11. Engineering baseline
-12. Runbook/recovery skeleton
+Highest-value early artifacts:
 
-## 14. First thin vertical slice
+1. real business workflow map for the first slice;
+2. quality-attribute scenarios;
+3. system context and application/container view using the C4 model (Context, Containers, Components, Code);
+4. data ownership/sensitivity map;
+5. trust boundaries and threat model;
+6. stack Architecture Decision Record;
+7. deployment/build/test baseline when implementation starts;
+8. runbook/recovery skeleton before operational dependence.
 
-Do not build the entire clinic operating system first.
+Advanced notation/pattern material remains Academy knowledge until the project needs it.
 
-After architecture baseline approval, select one small real workflow that can be tested end-to-end with synthetic/private-safe data. Example categories include a bounded appointment/follow-up workflow or an internal operational checklist.
+## 15. First thin vertical slice
 
-The slice should demonstrate:
+After owner ratification of the stack and first workflow, prefer one thin end-to-end slice rather than the whole clinic operating system.
 
-`input → validation → domain rule → persistence/integration → visible result → audit evidence → failure/recovery → tests`
+Candidate learning slice to validate against current clinic documents/workflow:
 
-Only after observing the slice should the architecture expand.
+`book/hold appointment → validate availability → deposit/payment status → confirmation → audit evidence → failure/recovery`
 
-## 15. Anti-drift rules
+This is a hypothesis, not a command to replace existing scheduling/payment providers. Build-versus-buy analysis comes first.
 
-- Every major structural/security/data decision gets an ADR.
+## 16. Architecture fitness rules
+
+The first concrete product-separation fitness rule should be:
+
+> **BodyFixOS source code must never directly import HumanOS internals.**
+
+The reciprocal HumanOS rule should also exist. The rule is **ENFORCED** only when a repeatable test / Continuous Integration check actually blocks violating source imports; until then it is DOCUMENTED.
+
+Additional fitness rules should arise from real failure risk rather than an arbitrary checklist.
+
+## 17. Judgment Disclosure
+
+This baseline contains judgment, not only facts.
+
+Judgments include:
+
+- retaining the independent-product boundary;
+- modular-monolith direction;
+- reconstructing the previously selected TypeScript / Next.js / PostgreSQL / managed Supabase stack for repository ratification;
+- removing speculative ports and the `HumanOSPort` placeholder;
+- adding build-versus-buy, agent-security, and compliance-review checkpoints;
+- prioritizing a thin booking/deposit/confirmation learning slice subject to workflow validation.
+
+These choices are intentionally visible so the owner can ratify, amend, or reject them. Mechanical repository edits do not substitute for ratification.
+
+## 18. Anti-drift rules
+
+- Every major structural/security/data decision gets an Architecture Decision Record when the decision is actually made.
 - Architecture diagrams state `AS-BUILT` or `TARGET`; never blur them.
 - Public documentation cannot claim a capability based only on a plan.
-- CI eventually checks important dependency/boundary rules.
-- Each release reviews architecture drift and vendor/data-boundary changes.
-- Generated evidence belongs in designated artifact locations, not the repository root.
-- Worktrees, backups and migration exports have designated local locations separate from the canonical repository.
+- Evidence states distinguish DOCUMENTED, TESTED and ENFORCED.
+- Generated dependency/import maps should be re-runnable where practical.
+- Each release reviews meaningful architecture drift and vendor/data-boundary changes.
+- Generated evidence belongs in designated artifact locations, not repository or home-directory roots.
 - BodyFixOS remains independently buildable, testable, deployable and recoverable without HumanOS.
